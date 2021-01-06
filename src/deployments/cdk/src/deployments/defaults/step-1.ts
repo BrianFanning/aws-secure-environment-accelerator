@@ -273,6 +273,16 @@ function createCentralLogBucket(props: DefaultsStep1Props) {
     }),
   );
 
+  // Allow IAM roles with ssm-log-archive-read-only-access to bucket
+  const iamConfig = config.getIamConfigs();
+  console.log("config.getIamConfigs():");
+  console.log(iamConfig);
+  // for (const iamRole of iamConfig['iam']['roles']) {
+  //   if (iamRole['iam']['roles']['ssm-log-archive-read-only-access']) {
+      
+  //   }
+  // }
+
   new CfnLogBucketOutput(logAccountStack, 'LogBucketOutput', {
     bucketArn: logBucket.bucketArn,
     bucketName: logBucket.bucketName,

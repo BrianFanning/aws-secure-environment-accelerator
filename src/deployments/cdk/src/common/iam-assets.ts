@@ -159,6 +159,34 @@ export class IamAssets extends cdk.Construct {
       return iamSSMLogArchiveAccessPolicy;
     };
 
+    const createIamSSMLogArchiveReadOnlyPolicy = (): iam.ManagedPolicy => {
+      const policyName = createPolicyName('SSMReadOnlyAccessPolicy');
+      const iamSSMLogArchiveReadOnlyAccessPolicy = new iam.ManagedPolicy(this, `IAM-SSM-LogArchive-ReadOnly-Policy-${accountKey}`, {
+        managedPolicyName: policyName,
+        description: policyName,
+      });
+
+      iamSSMLogArchiveReadOnlyAccessPolicy.addStatements(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['kms:Decrypt'],
+          resources: [logBucket.encryptionKey?.keyArn || '*'],
+        }),
+
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['s3:GetObject'],
+          resources: [logBucket.arnForObjects('*')],
+        }),
+      );
+      new CfnIamPolicyOutput(this, `IamSsmPolicyOutput`, {
+        policyName: iamSSMLogArchiveReadOnlyAccessPolicy.managedPolicyName,
+        policyArn: iamSSMLogArchiveReadOnlyAccessPolicy.managedPolicyArn,
+        policyKey: 'IamSsmReadOnlyAccessPolicy',
+      });
+      return iamSSMLogArchiveReadOnlyAccessPolicy;
+    };
+
     if (!IamConfigType.is(iamConfig)) {
       console.log(
         `IAM config is not defined for account with key - ${accountKey}. Skipping Policies/Users/Roles creation.`,
@@ -194,6 +222,9 @@ export class IamAssets extends cdk.Construct {
       const ssmLogArchivePolicy =
         iamRoles.filter(i => i['ssm-log-archive-access']).length > 0 ? createIamSSMLogArchivePolicy() : undefined;
 
+      const ssmLogArchiveReadOnlyPolicy =
+        iamRoles.filter(i => i['ssm-log-archive-read-only-access']).length > 0 ? createIamSSMLogArchiveReadOnlyPolicy() : undefined;
+
       for (const iamRole of iamRoles) {
         if (!IamRoleConfigType.is(iamRole)) {
           console.log(
@@ -226,6 +257,10 @@ export class IamAssets extends cdk.Construct {
 
           if (iamRole['ssm-log-archive-access'] && ssmLogArchivePolicy) {
             role.addManagedPolicy(ssmLogArchivePolicy);
+          }
+
+          if (iamRole['ssm-log-archive-read-only-access'] && ssmLogArchiveReadOnlyPolicy) {
+            role.addManagedPolicy(ssmLogArchiveReadOnlyPolicy);
           }
         }
       }

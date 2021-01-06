@@ -251,6 +251,7 @@ export const IamRoleConfigType = t.interface({
   'source-account-role': optional(t.string),
   'trust-policy': optional(t.string),
   'ssm-log-archive-access': optional(t.boolean),
+  'ssm-log-archive-read-only-access': optional(t.boolean),
 });
 
 export const IamConfigType = t.interface({
