@@ -179,7 +179,7 @@ export class IamAssets extends cdk.Construct {
           resources: [logBucket.arnForObjects('*')],
         }),
       );
-      new CfnIamPolicyOutput(this, `IamSsmPolicyOutput`, {
+      new CfnIamPolicyOutput(this, `IamSsmReadOnlyPolicyOutput`, {
         policyName: iamSSMLogArchiveReadOnlyAccessPolicy.managedPolicyName,
         policyArn: iamSSMLogArchiveReadOnlyAccessPolicy.managedPolicyArn,
         policyKey: 'IamSsmReadOnlyAccessPolicy',
