@@ -14,7 +14,7 @@ import {
 } from '@aws-accelerator/cdk-accelerator/src/core/accelerator-name-generator';
 import { CfnLogBucketOutput, CfnAesBucketOutput, CfnCentralBucketOutput, CfnEbsKmsOutput } from './outputs';
 import { AccountStacks } from '../../common/account-stacks';
-import { Account } from '../../utils/accounts';
+import { Account, getAccountId } from '../../utils/accounts';
 import { createDefaultS3Bucket, createDefaultS3Key } from './shared';
 import { overrideLogicalId } from '../../utils/cdk';
 import { getVpcSharedAccountKeys } from '../../common/vpc-subnet-sharing';
@@ -159,7 +159,7 @@ function createCentralBucketCopy(props: DefaultsStep1Props) {
  * Creates a bucket that contains copies of the files in the central bucket.
  */
 function createCentralLogBucket(props: DefaultsStep1Props) {
-  const { accountStacks, accounts, config } = props;
+  const { accountStacks, accounts, config} = props;
 
   const logAccountConfig = config['global-options']['central-log-services'];
   const logAccountStack = accountStacks.getOrCreateAccountStack(logAccountConfig.account);
@@ -273,15 +273,21 @@ function createCentralLogBucket(props: DefaultsStep1Props) {
     }),
   );
 
-  // Allow IAM roles with ssm-log-archive-read-only-access to bucket
-  const iamConfig = config.getIamConfigs();
-  console.log("config.getIamConfigs():");
-  console.log(iamConfig);
-  // for (const iamRole of iamConfig['iam']['roles']) {
-  //   if (iamRole['iam']['roles']['ssm-log-archive-read-only-access']) {
-      
-  //   }
-  // }
+  for (const {accountKey, iam: iamConfig} of config.getIamConfigs()) {
+    const accountId = getAccountId(accounts, accountKey);
+    const roles = iamConfig.roles || [];
+    for (const role of roles) {
+      if (role['ssm-log-archive-read-only-access']) {
+        logBucket.addToResourcePolicy(
+          new iam.PolicyStatement({
+            actions: ['s3.GetObject'],
+            principals: [new iam.ArnPrincipal(`arn:aws:iam::${accountId}/role/${role.role}`)],
+            resources: [`${logBucket.bucketArn}`]
+          })
+        )
+      }
+    }
+  }
 
   new CfnLogBucketOutput(logAccountStack, 'LogBucketOutput', {
     bucketArn: logBucket.bucketArn,
