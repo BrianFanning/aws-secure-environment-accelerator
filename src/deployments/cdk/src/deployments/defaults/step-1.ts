@@ -282,7 +282,7 @@ function createCentralLogBucket(props: DefaultsStep1Props) {
           new iam.PolicyStatement({
             actions: ['s3:GetObject'],
             principals: [new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)],
-            resources: [`${logBucket.bucketArn}`]
+            resources: [`${logBucket.bucketArn}/*`]
           })
         )
       }
