@@ -281,7 +281,7 @@ function createCentralLogBucket(props: DefaultsStep1Props) {
         logBucket.addToResourcePolicy(
           new iam.PolicyStatement({
             actions: ['s3:GetObject'],
-            principals: [new iam.ArnPrincipal(`arn:aws:iam::${accountId}/role/${role.role}`)],
+            principals: [new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)],
             resources: [`${logBucket.bucketArn}`]
           })
         )
