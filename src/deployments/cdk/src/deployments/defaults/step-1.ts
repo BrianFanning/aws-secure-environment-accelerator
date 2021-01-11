@@ -278,10 +278,11 @@ function createCentralLogBucket(props: DefaultsStep1Props) {
     const roles = iamConfig.roles || [];
     for (const role of roles) {
       if (role['ssm-log-archive-read-only-access']) {
+        const rolePrincipal = new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)
         logBucket.addToResourcePolicy(
           new iam.PolicyStatement({
             actions: ['s3:GetObject'],
-            principals: [new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)],
+            principals: [rolePrincipal],
             resources: [`${logBucket.bucketArn}/*`]
           })
         )
