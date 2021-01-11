@@ -261,6 +261,14 @@ export class IamAssets extends cdk.Construct {
 
           if (iamRole['ssm-log-archive-read-only-access'] && ssmLogArchiveReadOnlyPolicy) {
             role.addManagedPolicy(ssmLogArchiveReadOnlyPolicy);
+            const accountId = getAccountId(accounts, accountKey);
+            logBucket.encryptionKey?.addToResourcePolicy(
+              new iam.PolicyStatement({
+                actions: ['kms:Decrypt'],
+                principals: [new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${iamRole.role}`)],
+                resources: ['*']
+              })
+            )
           }
         }
       }

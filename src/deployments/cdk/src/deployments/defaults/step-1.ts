@@ -278,19 +278,11 @@ function createCentralLogBucket(props: DefaultsStep1Props) {
     const roles = iamConfig.roles || [];
     for (const role of roles) {
       if (role['ssm-log-archive-read-only-access']) {
-        const rolePrincipal = new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)
         logBucket.addToResourcePolicy(
           new iam.PolicyStatement({
             actions: ['s3:GetObject'],
-            principals: [rolePrincipal],
+            principals: [new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)],
             resources: [`${logBucket.bucketArn}/*`]
-          })
-        )
-        logBucket.encryptionKey?.addToResourcePolicy(
-          new iam.PolicyStatement({
-            actions: ['kms:Decrypt'],
-            principals: [rolePrincipal],
-            resources: ['*']
           })
         )
       }
