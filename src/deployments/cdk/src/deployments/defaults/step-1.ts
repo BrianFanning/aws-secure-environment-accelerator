@@ -273,23 +273,6 @@ function createCentralLogBucket(props: DefaultsStep1Props) {
     }),
   );
 
-  // for (const {accountKey, iam: iamConfig} of config.getIamConfigs()) {
-  //   const accountId = getAccountId(accounts, accountKey);
-  //   const roles = iamConfig.roles || [];
-  //   for (const role of roles) {
-  //     if (role['ssm-log-archive-read-only-access']) {
-  //       const rolePrincipal = new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)
-  //       logBucket.addToResourcePolicy(
-  //         new iam.PolicyStatement({
-  //           actions: ['s3:GetObject'],
-  //           principals: [rolePrincipal],
-  //           resources: [`${logBucket.bucketArn}/*`]
-  //         })
-  //       )
-  //     }
-  //   }
-  // }
-
   new CfnLogBucketOutput(logAccountStack, 'LogBucketOutput', {
     bucketArn: logBucket.bucketArn,
     bucketName: logBucket.bucketName,
