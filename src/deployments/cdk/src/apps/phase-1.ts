@@ -33,6 +33,7 @@ import * as vpcDeployment from '../deployments/vpc';
 import * as transitGateway from '../deployments/transit-gateway';
 import * as centralEndpoints from '../deployments/central-endpoints';
 import { VpcOutputFinder, VpcSubnetOutput } from '@aws-accelerator/common-outputs/src/vpc';
+import { logArchiveReadOnlyAccess } from '../deployments/s3/log-archive-read-access';
 
 export interface IamPolicyArtifactsOutput {
   bucketArn: string;
@@ -403,30 +404,12 @@ export async function deploy({ acceleratorConfig, accountStacks, accounts, conte
     }
   }
 
-  // Update Log Archive Bucket and KMS Key policies for roles with ssm-log-archive-read-only-access
-  for (const {accountKey, iam: iamConfig} of acceleratorConfig.getIamConfigs()) {
-    const accountId = getAccountId(accounts, accountKey);
-    const roles = iamConfig.roles || [];
-    for (const role of roles) {
-      if (role['ssm-log-archive-read-only-access']) {
-        const rolePrincipal = new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)
-        logBucket.addToResourcePolicy(
-          new iam.PolicyStatement({
-            actions: ['s3:GetObject'],
-            principals: [rolePrincipal],
-            resources: [`${logBucket.bucketArn}/*`],
-          })
-        )
-        logBucket.encryptionKey?.addToResourcePolicy(
-          new iam.PolicyStatement({
-            actions: ['kms:Decrypt'],
-            principals: [rolePrincipal],
-            resources: ['*']
-          })
-        )
-      }
-    }
-  }
+  await logArchiveReadOnlyAccess({
+    accountStacks,
+    accounts,
+    logBucketInfo: logBucket,
+    config: acceleratorConfig
+  })
 
   // Budget creation step 2
   await budget.step2({
