@@ -33,7 +33,6 @@ import * as vpcDeployment from '../deployments/vpc';
 import * as transitGateway from '../deployments/transit-gateway';
 import * as centralEndpoints from '../deployments/central-endpoints';
 import { VpcOutputFinder, VpcSubnetOutput } from '@aws-accelerator/common-outputs/src/vpc';
-import { logArchiveReadOnlyAccess } from '../deployments/s3/log-archive-read-access';
 
 export interface IamPolicyArtifactsOutput {
   bucketArn: string;
@@ -403,13 +402,6 @@ export async function deploy({ acceleratorConfig, accountStacks, accounts, conte
       await createIamAssets(orgAccount.key, orgConfig.iam);
     }
   }
-
-  await logArchiveReadOnlyAccess({
-    accountStacks,
-    accounts,
-    logBucketInfo: logBucket,
-    config: acceleratorConfig
-  })
 
   // Budget creation step 2
   await budget.step2({
