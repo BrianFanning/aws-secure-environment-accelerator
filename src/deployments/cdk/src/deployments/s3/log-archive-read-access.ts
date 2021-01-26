@@ -17,7 +17,7 @@ export async function logArchiveReadOnlyAccess(props:LogArchiveReadAccessProps) 
   const logArchiveAccountKey = config['global-options']['central-log-services'].account;
   const logArchiveStack = accountStacks.getOrCreateAccountStack(logArchiveAccountKey);
 
-  const logBucket = s3.Bucket.fromBucketName(logArchiveStack, 'LogArchiveBucket', logBucketInfo.bucketArn);
+  const logBucket = s3.Bucket.fromBucketArn(logArchiveStack, 'LogArchiveBucket', logBucketInfo.bucketArn);
 
   // Update Log Archive Bucket and KMS Key policies for roles with ssm-log-archive-read-only-access
   for (const {accountKey, iam: iamConfig} of config.getIamConfigs()) {
