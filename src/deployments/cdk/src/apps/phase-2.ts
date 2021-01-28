@@ -346,12 +346,12 @@ export async function deploy({ acceleratorConfig, accountStacks, accounts, conte
     outputs,
   });
 
-  // await logArchiveReadOnlyAccess({
-  //   accountStacks,
-  //   accounts,
-  //   logBucket,
-  //   config: acceleratorConfig
-  // })
+  await logArchiveReadOnlyAccess({
+    accountStacks,
+    accounts,
+    logBucket,
+    config: acceleratorConfig
+  })
 
   await tgwDeployment.acceptPeeringAttachment({
     accountStacks,
