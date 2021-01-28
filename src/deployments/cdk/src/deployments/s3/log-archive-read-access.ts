@@ -3,21 +3,22 @@ import * as iam from '@aws-cdk/aws-iam';
 import { AccountStacks } from '../../common/account-stacks';
 import { AcceleratorConfig } from '@aws-accelerator/common-config/src';
 import { Account, getAccountId } from '@aws-accelerator/common-outputs/src/accounts';
+import { S3UpdateLogArchivePolicy } from '@aws-accelerator/custom-resource-s3-update-logarchive-policy';
 
 export interface LogArchiveReadAccessProps {
   accountStacks: AccountStacks;
   accounts: Account[]
-  logBucketInfo: s3.IBucket;
+  logBucket: s3.IBucket;
   config: AcceleratorConfig;
 }
 
 export async function logArchiveReadOnlyAccess(props:LogArchiveReadAccessProps) {
-  const { accountStacks, accounts, logBucketInfo, config } = props;
+  const { accountStacks, accounts, logBucket, config } = props;
 
   const logArchiveAccountKey = config['global-options']['central-log-services'].account;
   const logArchiveStack = accountStacks.getOrCreateAccountStack(logArchiveAccountKey);
 
-  const logBucket = s3.Bucket.fromBucketArn(logArchiveStack, 'LogArchiveBucket', logBucketInfo.bucketArn);
+  let logArchiveReadOnlyRoles = [];
 
   // Update Log Archive Bucket and KMS Key policies for roles with ssm-log-archive-read-only-access
   for (const {accountKey, iam: iamConfig} of config.getIamConfigs()) {
@@ -25,22 +26,13 @@ export async function logArchiveReadOnlyAccess(props:LogArchiveReadAccessProps) 
     const roles = iamConfig.roles || [];
     for (const role of roles) {
       if (role['ssm-log-archive-read-only-access']) {
-        const rolePrincipal = new iam.ArnPrincipal(`arn:aws:iam::${accountId}:role/${role.role}`)
-        logBucket.addToResourcePolicy(
-          new iam.PolicyStatement({
-            actions: ['s3:GetObject'],
-            principals: [rolePrincipal],
-            resources: [`${logBucket.bucketArn}/*`],
-          })
-        )
-        logBucket.encryptionKey?.addToResourcePolicy(
-          new iam.PolicyStatement({
-            actions: ['kms:Decrypt'],
-            principals: [rolePrincipal],
-            resources: ['*']
-          })
-        )
+        logArchiveReadOnlyRoles.push(`arn:aws:iam::${accountId}:role/${role.role}`)
       }
     }
   }
+
+  const LogBucketPolicy = new S3UpdateLogArchivePolicy(logArchiveStack, "UpdateLogArchivePolicy", {
+    roles: logArchiveReadOnlyRoles,
+    logBucket
+  })
 }
