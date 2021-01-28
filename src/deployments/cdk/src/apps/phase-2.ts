@@ -349,7 +349,7 @@ export async function deploy({ acceleratorConfig, accountStacks, accounts, conte
   await logArchiveReadOnlyAccess({
     accountStacks,
     accounts,
-    logBucketInfo: logBucket,
+    logBucket,
     config: acceleratorConfig
   })
 
