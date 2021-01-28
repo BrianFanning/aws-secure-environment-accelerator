@@ -38,129 +38,122 @@ async function onEvent(event: CloudFormationCustomResourceEvent) {
   }
 }
 
-async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
-  const properties = getPropertiesFromEvent(event);
-  s3.getBucketPolicy({
-    Bucket: properties.logBucketName
-  }, 
-  function (err, data) {
-    if(err) {
-      console.error(err, err.stack);
-    }
-    const logArchiveReadOnlyStatement = {
-      Sid: bucketPolicyStatementId,
-      Effect: 'Allow',
-      Action: ['s3:GetObject'],
-      Principals: properties.roles,
-    }
-    if(data.Policy) {
-      let policyJson = JSON.parse(data.Policy)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const policyStatements: any[] = policyJson.Statement
-
-      // If there is an existing "SSM Log Archive Read Only Roles" statement, remove it
-      let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
-      updatedStatements.push(logArchiveReadOnlyStatement)
-      policyJson.Statement = updatedStatements
-      s3.putBucketPolicy({
-        Bucket: properties.logBucketName,
-        Policy: JSON.stringify(policyJson)
-      },
-      function(err, data) {
-        if(err) {
-          console.error(err, err.stack);
-        }
-        return {}
-      })
+async function getBucketPolicy(logBucketName: string) {
+  try {
+    const response = await s3.getBucketPolicy({
+      Bucket: logBucketName
+    }).promise()
+    if(response.Policy) {
+      return JSON.parse(response.Policy)
     }
     else {
-      const bucketPolicy = {
-        Version: "2012-10-17",
-        Statement: [logArchiveReadOnlyStatement]
-      }
-      s3.putBucketPolicy({
-        Bucket: properties.logBucketName,
-        Policy: JSON.stringify(bucketPolicy)
-      },
-      function(err, data) {
-        if(err) {
-          console.error(err, err.stack);
-        }
-        return {}
-      })
+      return {}
     }
-  })
+  }
+  catch (err) {
+    console.error(err, err.stack);
+    throw err;
+  }
+}
+
+async function putBucketPolicy(logBucketName: string, policy: string) {
+  try {
+    const response = await s3.putBucketPolicy({
+      Bucket: logBucketName,
+      Policy: policy
+    }).promise()
+  }
+  catch (err) {
+    console.error(err, err.stack);
+    throw err;
+  }
+}
+
+async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
+  const properties = getPropertiesFromEvent(event);
+  let policy = await getBucketPolicy(properties.logBucketName)
+
+  const logArchiveReadOnlyStatement = {
+    Sid: bucketPolicyStatementId,
+    Effect: 'Allow',
+    Action: ['s3:GetObject'],
+    Principals: properties.roles,
+  }
+
+  if(Object.keys(policy).length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const policyStatements: any[] = policy.Statement
+
+    // If there is an existing "SSM Log Archive Read Only Roles" statement, remove it
+    let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
+    updatedStatements.push(logArchiveReadOnlyStatement)
+    policy.Statement = updatedStatements
+  }
+  else {
+    policy = {
+      Version: "2012-10-17",
+      Statement: [logArchiveReadOnlyStatement]
+    }
+  }
+  const response = await putBucketPolicy(properties.logBucketName, JSON.stringify(policy))
+  return {}
 }
 
 async function onUpdate(event: CloudFormationCustomResourceUpdateEvent) {
   const properties = getPropertiesFromEvent(event);
-  s3.getBucketPolicy({
-    Bucket: properties.logBucketName
-  }, 
-  function (err, data) {
-    if(err) {
-      console.error(err, err.stack);
-    }
-    if(data.Policy) {
-      let policyJson = JSON.parse(data.Policy)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const policyStatements: any[] = policyJson.Statement
+  let policy = await getBucketPolicy(properties.logBucketName)
 
-      // If there is an existing "SSM Log Archive Read Only Roles" statement, remove it
-      let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
-      const logArchiveReadOnlyStatement = {
-        Sid: bucketPolicyStatementId,
-        Effect: 'Allow',
-        Action: ['s3:GetObject'],
-        Principals: properties.roles,
-      }
-      updatedStatements.push(logArchiveReadOnlyStatement)
-      policyJson.Statement = updatedStatements
-      s3.putBucketPolicy({
-        Bucket: properties.logBucketName,
-        Policy: JSON.stringify(policyJson)
-      },
-      function(err, data) {
-        if(err) {
-          console.error(err, err.stack);
-        }
-        return {}
-      })
+  const logArchiveReadOnlyStatement = {
+    Sid: bucketPolicyStatementId,
+    Effect: 'Allow',
+    Action: ['s3:GetObject'],
+    Principals: properties.roles,
+  }
+
+  if(Object.keys(policy).length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const policyStatements: any[] = policy.Statement
+
+    // Remove existing "SSM Log Archive Read Only Roles" statement
+    let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
+    updatedStatements.push(logArchiveReadOnlyStatement)
+    policy.Statement = updatedStatements
+  }
+  else {
+    policy = {
+      Version: "2012-10-17",
+      Statement: [logArchiveReadOnlyStatement]
     }
-    else {
-      console.error("Bucket policy is missing")
-    }
-  })
+  }
+  const response = await putBucketPolicy(properties.logBucketName, JSON.stringify(policy))
+  return {}
 }
 
 async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
   const properties = getPropertiesFromEvent(event);
-  s3.getBucketPolicy({
-    Bucket: properties.logBucketName
-  }, 
-  function (err, data) {
-    if(err) {
-      console.error(err, err.stack);
-    }
-    if(data.Policy) {
-      let policyJson = JSON.parse(data.Policy)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const policyStatements: any[] = policyJson.Statement
-      let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
-      policyJson.Statement = updatedStatements
-      s3.putBucketPolicy({
-        Bucket: properties.logBucketName,
-        Policy: JSON.stringify(policyJson)
-      },
-      function(err, data) {
-        if(err) {
-          console.error(err, err.stack);
-        }
-        return {}
-      })
-    }
+  let policy = await getBucketPolicy(properties.logBucketName)
+
+  const logArchiveReadOnlyStatement = {
+    Sid: bucketPolicyStatementId,
+    Effect: 'Allow',
+    Action: ['s3:GetObject'],
+    Principals: properties.roles,
+  }
+
+  if(Object.keys(policy).length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const policyStatements: any[] = policy.Statement
+
+    // If there is an existing "SSM Log Archive Read Only Roles" statement, remove it
+    let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
+    updatedStatements.push(logArchiveReadOnlyStatement)
+    policy.Statement = updatedStatements
+    const response = await putBucketPolicy(properties.logBucketName, JSON.stringify(policy))
+  }
+  else {
     return {}
-  })
+  }
+  return {}
 }
 
 function getPropertiesFromEvent(event: CloudFormationCustomResourceEvent) {
