@@ -59,7 +59,7 @@ export class S3UpdateLogArchivePolicy extends cdk.Construct {
     const lambdaDir = path.dirname(lambdaPath);
 
     const role = new iam.Role(stack, 'Role', {
-      roleName: "S3UpdateLogArchivePolicy",
+      roleName: "PBMMAccel-S3UpdateLogArchivePolicy",
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
     });
 
