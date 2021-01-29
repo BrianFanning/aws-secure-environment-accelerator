@@ -126,6 +126,7 @@ async function addStatementToPolicy(policy: any, statement: PolicyStatement) {
     const updatedStatements = removeExistingReadOnlyStatement(policy)
     updatedStatements.push(statement);
     policy.Statement = updatedStatements;
+    return policy;
   }
   else {
     return {
