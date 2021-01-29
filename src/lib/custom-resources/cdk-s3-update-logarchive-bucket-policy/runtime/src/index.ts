@@ -7,8 +7,6 @@ import {
   CloudFormationCustomResourceDeleteEvent,
 } from 'aws-lambda';
 import { errorHandler } from '@aws-accelerator/custom-resource-runtime-cfn-response';
-import { addCustomResourceTags } from '@aws-accelerator/custom-resource-runtime-cfn-tags';
-import { throttlingBackOff } from '@aws-accelerator/custom-resource-cfn-utils';
 
 export interface HandlerProperties {
   roles: string[];
@@ -21,10 +19,21 @@ export const handler = errorHandler(onEvent);
 
 const kms = new AWS.KMS();
 const s3 = new AWS.S3();
-const bucketPolicyStatementId = "SSM Log Archive Read Only Roles"
+const logArchiveReadOnlySid = "SSM Log Archive Read Only Roles"
+
+interface PolicyStatement {
+  Sid: string,
+  Effect: string,
+  Action: string[],
+  Principal: {
+    AWS: string[]
+  },
+  Resource: string[] | string
+}
 
 async function onEvent(event: CloudFormationCustomResourceEvent) {
-  console.log(`Adding roles with /'ssm-log-archive-read-only-access: true/' to the Log Archive Bucket Policy...`);
+  console.log(`Adding roles with /'ssm-log-archive-read-only-access: true/'
+   to the Log Archive Bucket Policy...`);
   console.log(JSON.stringify(event, null, 2));
 
   // eslint-disable-next-line default-case
@@ -46,9 +55,7 @@ async function getBucketPolicy(logBucketName: string) {
     if(response.Policy) {
       return JSON.parse(response.Policy)
     }
-    else {
-      return {}
-    }
+    return {}
   }
   catch (err) {
     console.error(err, err.stack);
@@ -58,7 +65,7 @@ async function getBucketPolicy(logBucketName: string) {
 
 async function putBucketPolicy(logBucketName: string, policy: string) {
   try {
-    const response = await s3.putBucketPolicy({
+    await s3.putBucketPolicy({
       Bucket: logBucketName,
       Policy: policy
     }).promise()
@@ -69,96 +76,126 @@ async function putBucketPolicy(logBucketName: string, policy: string) {
   }
 }
 
-async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
-  const properties = getPropertiesFromEvent(event);
-  let policy = await getBucketPolicy(properties.logBucketName)
+async function getKmsKeyPolicy(keyArn: string | undefined) {
+  if(keyArn) {
+    try {
+      const response = await kms.getKeyPolicy({
+        KeyId: keyArn,
+        PolicyName: 'default'
+      }).promise()
+      if(response.Policy) {
+        return JSON.parse(response.Policy)
+      }
+      return {}
+    }
+    catch (err) {
+      console.error(err, err.stack);
+      throw err;
+    }
+  }
+  return {}
+}
 
-  const logArchiveReadOnlyStatement = {
-    Sid: bucketPolicyStatementId,
+async function putKmsKeyPolicy(keyArn: string | undefined, policy: string) {
+  if (keyArn) {
+    try {
+      await kms.putKeyPolicy({
+        KeyId: keyArn,
+        Policy: policy,
+        PolicyName: 'default'
+      }).promise()
+    }
+    catch (err) {
+      console.error(err, err.stack);
+      throw err;
+    }
+  }
+  else {
+    console.error("No KMS Key ARN defined")
+  }
+}
+
+function removeExistingReadOnlyStatement(policy: any) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const policyStatements: any[] = policy.Statement
+  return policyStatements.filter(statement => statement['Sid'] !== logArchiveReadOnlySid);
+}
+
+async function addStatementToPolicy(policy: any, statement: PolicyStatement) {
+  if(Object.keys(policy).length > 0) {
+    const updatedStatements = removeExistingReadOnlyStatement(policy)
+    updatedStatements.push(statement);
+    policy.Statement = updatedStatements;
+  }
+  else {
+    return {
+      Version: "2012-10-17",
+      Statement: [policy]
+    }
+  }
+}
+
+async function createOrUpdateBucketPolicy(props: HandlerProperties) {
+  let bucketPolicy = await getBucketPolicy(props.logBucketName);
+  let keyPolicy = await getKmsKeyPolicy(props.logBucketKmsKeyArn);
+
+  const bucketPolicyStatement = {
+    Sid: logArchiveReadOnlySid,
     Effect: 'Allow',
     Action: ['s3:GetObject'],
     Principal: {
-      AWS: properties.roles,
+      AWS: props.roles
     },
-    Resource: [`${properties.logBucketArn}/*`]
+    Resource: [`${props.logBucketArn}/*`]
   }
 
-  if(Object.keys(policy).length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const policyStatements: any[] = policy.Statement
+  const keyPolicyStatement = {
+    Sid: logArchiveReadOnlySid,
+    Effect: 'Allow',
+    Action: ['kms:Decrypt'],
+    Principal: {
+      AWS: props.roles
+    },
+    Resource: '*'
+  }
 
-    // If there is an existing "SSM Log Archive Read Only Roles" statement, remove it
-    let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
-    updatedStatements.push(logArchiveReadOnlyStatement)
-    policy.Statement = updatedStatements
-  }
-  else {
-    policy = {
-      Version: "2012-10-17",
-      Statement: [logArchiveReadOnlyStatement]
-    }
-  }
-  const response = await putBucketPolicy(properties.logBucketName, JSON.stringify(policy))
+  bucketPolicy = addStatementToPolicy(bucketPolicy, bucketPolicyStatement);
+  keyPolicy = addStatementToPolicy(keyPolicy, keyPolicyStatement);
+
+  await putBucketPolicy(props.logBucketName, JSON.stringify(bucketPolicy));
+  await putKmsKeyPolicy(props.logBucketKmsKeyArn, JSON.stringify(keyPolicy));
   return {}
+}
+
+async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
+  const props = getPropertiesFromEvent(event);
+  await createOrUpdateBucketPolicy(props)
 }
 
 async function onUpdate(event: CloudFormationCustomResourceUpdateEvent) {
-  const properties = getPropertiesFromEvent(event);
-  let policy = await getBucketPolicy(properties.logBucketName)
-
-  const logArchiveReadOnlyStatement = {
-    Sid: bucketPolicyStatementId,
-    Effect: 'Allow',
-    Action: ['s3:GetObject'],
-    Principal: {
-      AWS: properties.roles,
-    }
-  }
-
-  if(Object.keys(policy).length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const policyStatements: any[] = policy.Statement
-
-    // Remove existing "SSM Log Archive Read Only Roles" statement
-    let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
-    updatedStatements.push(logArchiveReadOnlyStatement)
-    policy.Statement = updatedStatements
-  }
-  else {
-    policy = {
-      Version: "2012-10-17",
-      Statement: [logArchiveReadOnlyStatement]
-    }
-  }
-  const response = await putBucketPolicy(properties.logBucketName, JSON.stringify(policy))
-  return {}
+  const props = getPropertiesFromEvent(event);
+  await createOrUpdateBucketPolicy(props)
 }
 
 async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
-  const properties = getPropertiesFromEvent(event);
-  let policy = await getBucketPolicy(properties.logBucketName)
+  const props = getPropertiesFromEvent(event);
+  let bucketPolicy = await getBucketPolicy(props.logBucketName);
+  let keyPolicy = await getKmsKeyPolicy(props.logBucketKmsKeyArn);
 
-  const logArchiveReadOnlyStatement = {
-    Sid: bucketPolicyStatementId,
-    Effect: 'Allow',
-    Action: ['s3:GetObject'],
-    Principal: {
-      AWS: properties.roles,
-    }
+  if(Object.keys(bucketPolicy).length > 0) {
+    bucketPolicy = removeExistingReadOnlyStatement(bucketPolicy)
+
+    const response = await putBucketPolicy(
+      props.logBucketName,
+      JSON.stringify(bucketPolicy));
   }
 
-  if(Object.keys(policy).length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const policyStatements: any[] = policy.Statement
+  if(Object.keys(keyPolicy).length > 0) {
+    keyPolicy = removeExistingReadOnlyStatement(keyPolicy)
 
-    // If there is an existing "SSM Log Archive Read Only Roles" statement, remove it
-    let updatedStatements = policyStatements.filter(statement => statement['Sid'] !== bucketPolicyStatementId)
-    updatedStatements.push(logArchiveReadOnlyStatement)
-    policy.Statement = updatedStatements
-    const response = await putBucketPolicy(properties.logBucketName, JSON.stringify(policy))
-  }
-  else {
-    return {}
+    const response = await putKmsKeyPolicy(
+      props.logBucketKmsKeyArn,
+      JSON.stringify(keyPolicy));
   }
   return {}
 }

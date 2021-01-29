@@ -38,7 +38,6 @@ export class S3UpdateLogArchivePolicy extends cdk.Construct {
       logBucketKmsKeyArn: this.props.logBucket.encryptionKey?.keyArn
     };
 
-    // Create the resource in the onPrepare phase to make the renderTags() work properly
     this.resource = new cdk.CustomResource(this, 'Resource', {
       resourceType,
       serviceToken: this.lambdaFunction.functionArn,
