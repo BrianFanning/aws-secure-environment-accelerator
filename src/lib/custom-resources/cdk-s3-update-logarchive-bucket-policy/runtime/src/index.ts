@@ -79,7 +79,8 @@ async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
     Action: ['s3:GetObject'],
     Principal: {
       AWS: properties.roles,
-    }
+    },
+    Resource: [`${properties.logBucketArn}/*`]
   }
 
   if(Object.keys(policy).length > 0) {
