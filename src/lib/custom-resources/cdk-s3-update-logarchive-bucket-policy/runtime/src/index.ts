@@ -77,7 +77,9 @@ async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
     Sid: bucketPolicyStatementId,
     Effect: 'Allow',
     Action: ['s3:GetObject'],
-    Principals: properties.roles,
+    Principal: {
+      AWS: properties.roles,
+    }
   }
 
   if(Object.keys(policy).length > 0) {
@@ -107,7 +109,9 @@ async function onUpdate(event: CloudFormationCustomResourceUpdateEvent) {
     Sid: bucketPolicyStatementId,
     Effect: 'Allow',
     Action: ['s3:GetObject'],
-    Principals: properties.roles,
+    Principal: {
+      AWS: properties.roles,
+    }
   }
 
   if(Object.keys(policy).length > 0) {
@@ -137,7 +141,9 @@ async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
     Sid: bucketPolicyStatementId,
     Effect: 'Allow',
     Action: ['s3:GetObject'],
-    Principals: properties.roles,
+    Principal: {
+      AWS: properties.roles,
+    }
   }
 
   if(Object.keys(policy).length > 0) {
