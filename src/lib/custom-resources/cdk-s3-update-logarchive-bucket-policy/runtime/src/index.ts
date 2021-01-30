@@ -48,13 +48,17 @@ async function onEvent(event: CloudFormationCustomResourceEvent) {
 }
 
 async function getBucketPolicy(logBucketName: string) {
+  console.log("Inside getBucketPolicy function")
   try {
     const response = await s3.getBucketPolicy({
       Bucket: logBucketName
     }).promise()
     if(response.Policy) {
+      console.log('response.Policy evaluated to true. Heres what Im returning to the user:')
+      console.log(JSON.parse(response.Policy))
       return JSON.parse(response.Policy)
     }
+    console.log('response.Policy evaluated to false, returning {}')
     return {}
   }
   catch (err) {
@@ -64,6 +68,8 @@ async function getBucketPolicy(logBucketName: string) {
 }
 
 async function putBucketPolicy(logBucketName: string, policy: string) {
+  console.log('Inside the putbucketpolicy function. Heres what Im trying to post to AWS:')
+  console.log(policy)
   try {
     await s3.putBucketPolicy({
       Bucket: logBucketName,
@@ -111,27 +117,32 @@ async function putKmsKeyPolicy(keyArn: string | undefined, policy: string) {
     }
   }
   else {
-    console.error("No KMS Key ARN defined")
+    console.error("No KMS Key configured for this bucket")
   }
 }
 
-function removeExistingReadOnlyStatement(policy: any) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const policyStatements: any[] = policy.Statement
-  return policyStatements.filter(statement => statement['Sid'] !== logArchiveReadOnlySid);
+function removeExistingReadOnlyStatement(statements: PolicyStatement[]) {
+  return statements.filter(statement => statement['Sid'] !== logArchiveReadOnlySid);
 }
 
 async function addStatementToPolicy(policy: any, statement: PolicyStatement) {
+  console.log('inside addStatementToPolicy function')
   if(Object.keys(policy).length > 0) {
-    const updatedStatements = removeExistingReadOnlyStatement(policy)
+    console.log('Object.keys(policy).length > 0 is TRUE. Heres the policy before removing existing policy:')
+    const updatedStatements = removeExistingReadOnlyStatement(policy.Statement)
+    console.log(updatedStatements)
     updatedStatements.push(statement);
     policy.Statement = updatedStatements;
+    console.log('and here is the new updated policy to be returned to the createorupdate function:')
+    console.log(policy)
     return policy;
   }
   else {
+    console.log('Object.keys(policy).length > 0 is FALSE. Heres whats being returned to createorupdate function:')
+    console.log({Version: "2012-10-17", Statement: [statement]})
     return {
       Version: "2012-10-17",
-      Statement: [policy]
+      Statement: [statement]
     }
   }
 }
@@ -170,16 +181,19 @@ async function createOrUpdateBucketPolicy(props: HandlerProperties) {
 
 async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
   const props = getPropertiesFromEvent(event);
+  console.log("OnCreate called!")
   await createOrUpdateBucketPolicy(props)
 }
 
 async function onUpdate(event: CloudFormationCustomResourceUpdateEvent) {
   const props = getPropertiesFromEvent(event);
+  console.log("OnUpdate called!")
   await createOrUpdateBucketPolicy(props)
 }
 
 async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
   const props = getPropertiesFromEvent(event);
+  console.log("OnDelete called!")
   let bucketPolicy = await getBucketPolicy(props.logBucketName);
   let keyPolicy = await getKmsKeyPolicy(props.logBucketKmsKeyArn);
 
