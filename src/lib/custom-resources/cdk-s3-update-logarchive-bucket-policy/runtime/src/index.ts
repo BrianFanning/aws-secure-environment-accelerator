@@ -171,8 +171,8 @@ async function createOrUpdateBucketPolicy(props: HandlerProperties) {
     Resource: '*'
   }
 
-  bucketPolicy = addStatementToPolicy(bucketPolicy, bucketPolicyStatement);
-  keyPolicy = addStatementToPolicy(keyPolicy, keyPolicyStatement);
+  bucketPolicy = await addStatementToPolicy(bucketPolicy, bucketPolicyStatement);
+  keyPolicy = await addStatementToPolicy(keyPolicy, keyPolicyStatement);
 
   await putBucketPolicy(props.logBucketName, JSON.stringify(bucketPolicy));
   await putKmsKeyPolicy(props.logBucketKmsKeyArn, JSON.stringify(keyPolicy));
