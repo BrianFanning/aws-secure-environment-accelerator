@@ -171,7 +171,11 @@ async function createOrUpdateBucketPolicy(props: HandlerProperties) {
   const keyPolicyStatement = {
     Sid: logArchiveReadOnlySid,
     Effect: 'Allow',
-    Action: ['kms:Decrypt'],
+    Action: [
+      'kms:Decrypt',
+      'kms:DescribeKey',
+      'kms:GenerateDataKey'
+    ],
     Principal: {
       AWS: props.roles
     },

@@ -169,7 +169,7 @@ export class IamAssets extends cdk.Construct {
       iamSSMLogArchiveReadOnlyAccessPolicy.addStatements(
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: ['kms:Decrypt'],
+          actions: ['kms:Decrypt', 'kms:DescribeKey', 'kms:GenerateDataKey'],
           resources: [logBucket.encryptionKey?.keyArn || '*'],
         }),
 
