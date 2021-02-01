@@ -11,6 +11,7 @@ export interface LogArchiveReadAccessProps {
   roles: string[];
   logBucket: s3.IBucket;
   removalPolicy?: cdk.RemovalPolicy;
+  acceleratorPrefix: string;
 }
 
 /**
@@ -23,7 +24,7 @@ export class S3UpdateLogArchivePolicy extends cdk.Construct {
   constructor(scope: cdk.Construct, id: string, private readonly props: LogArchiveReadAccessProps) {
     super(scope, id);
 
-    const { roles, logBucket } = props;
+    const { roles, logBucket, acceleratorPrefix } = props;
   }
 
   get role(): iam.IRole {
@@ -58,7 +59,7 @@ export class S3UpdateLogArchivePolicy extends cdk.Construct {
     const lambdaDir = path.dirname(lambdaPath);
 
     const role = new iam.Role(stack, 'Role', {
-      roleName: "PBMMAccel-S3UpdateLogArchivePolicy",
+      roleName: `${this.props.acceleratorPrefix}S3UpdateLogArchivePolicy`,
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
     });
 

@@ -249,7 +249,9 @@ export async function saveIamPolicy(
       }
     }
 
-    const ssmPolicyLength = iamConfig.roles?.filter(r => r['ssm-log-archive-access']).length;
+    const ssmPolicyLength = iamConfig.roles?.filter(r => {
+      r['ssm-log-archive-write-access'] || r['ssm-log-archive-access']
+    }).length;
     if (ssmPolicyLength && ssmPolicyLength !== 0) {
       const ssmPolicyOutput = IamPolicyOutputFinder.findOneByName({
         outputs,

@@ -220,7 +220,9 @@ export class IamAssets extends cdk.Construct {
       }
 
       const ssmLogArchivePolicy =
-        iamRoles.filter(i => i['ssm-log-archive-access']).length > 0 ? createIamSSMLogArchivePolicy() : undefined;
+        iamRoles.filter(i => {
+          i['ssm-log-archive-write-access'] || i['ssm-log-archive-access']
+        }).length > 0 ? createIamSSMLogArchivePolicy() : undefined;
 
       const ssmLogArchiveReadOnlyPolicy =
         iamRoles.filter(i => i['ssm-log-archive-read-only-access']).length > 0 ? createIamSSMLogArchiveReadOnlyPolicy() : undefined;
@@ -255,7 +257,8 @@ export class IamAssets extends cdk.Construct {
             roleKey: 'IamAccountRole',
           });
 
-          if (iamRole['ssm-log-archive-access'] && ssmLogArchivePolicy) {
+          if ((iamRole['ssm-log-archive-write-access'] || iamRole['ssm-log-archive-access']) 
+              && ssmLogArchivePolicy) {
             role.addManagedPolicy(ssmLogArchivePolicy);
           }
 

@@ -48,17 +48,13 @@ async function onEvent(event: CloudFormationCustomResourceEvent) {
 }
 
 async function getBucketPolicy(logBucketName: string) {
-  console.log("Inside getBucketPolicy function")
   try {
     const response = await s3.getBucketPolicy({
       Bucket: logBucketName
     }).promise()
     if(response.Policy) {
-      console.log('response.Policy evaluated to true for bucketpolicy. Heres what Im returning:')
-      console.log(JSON.parse(response.Policy))
       return JSON.parse(response.Policy)
     }
-    console.log('response.Policy evaluated to false, returning {}')
     return {}
   }
   catch (err) {

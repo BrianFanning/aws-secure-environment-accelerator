@@ -350,7 +350,8 @@ export async function deploy({ acceleratorConfig, accountStacks, accounts, conte
     accountStacks,
     accounts,
     logBucket,
-    config: acceleratorConfig
+    config: acceleratorConfig,
+    acceleratorPrefix: context.acceleratorPrefix
   })
 
   await tgwDeployment.acceptPeeringAttachment({

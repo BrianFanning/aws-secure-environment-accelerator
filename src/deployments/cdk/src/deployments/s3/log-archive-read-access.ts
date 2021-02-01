@@ -10,10 +10,11 @@ export interface LogArchiveReadAccessProps {
   accounts: Account[]
   logBucket: s3.IBucket;
   config: AcceleratorConfig;
+  acceleratorPrefix: string;
 }
 
 export async function logArchiveReadOnlyAccess(props:LogArchiveReadAccessProps) {
-  const { accountStacks, accounts, logBucket, config } = props;
+  const { accountStacks, accounts, logBucket, config, acceleratorPrefix } = props;
 
   const logArchiveAccountKey = config['global-options']['central-log-services'].account;
   const logArchiveStack = accountStacks.getOrCreateAccountStack(logArchiveAccountKey);
@@ -33,6 +34,7 @@ export async function logArchiveReadOnlyAccess(props:LogArchiveReadAccessProps) 
 
   const LogBucketPolicy = new S3UpdateLogArchivePolicy(logArchiveStack, "UpdateLogArchivePolicy", {
     roles: logArchiveReadOnlyRoles,
-    logBucket
+    logBucket,
+    acceleratorPrefix
   })
 }
