@@ -34,7 +34,6 @@ interface PolicyStatement {
 async function onEvent(event: CloudFormationCustomResourceEvent) {
   console.log(`Adding roles with /'ssm-log-archive-read-only-access: true/'
    to the Log Archive Bucket Policy...`);
-  console.log(JSON.stringify(event, null, 2));
 
   // eslint-disable-next-line default-case
   switch (event.RequestType) {
@@ -64,8 +63,6 @@ async function getBucketPolicy(logBucketName: string) {
 }
 
 async function putBucketPolicy(logBucketName: string, policy: string) {
-  console.log('Inside the putbucketpolicy function. Heres what Im trying to post to AWS:')
-  console.log(policy)
   try {
     await s3.putBucketPolicy({
       Bucket: logBucketName,
@@ -79,7 +76,6 @@ async function putBucketPolicy(logBucketName: string, policy: string) {
 }
 
 async function getKmsKeyPolicy(keyArn: string | undefined) {
-  console.log("Inside getKmsKeyPolicy function")
   if(keyArn) {
     try {
       const response = await kms.getKeyPolicy({
@@ -87,8 +83,6 @@ async function getKmsKeyPolicy(keyArn: string | undefined) {
         PolicyName: 'default'
       }).promise()
       if(response.Policy) {
-        console.log('response.Policy evaluated to true for meypolicy. Heres what Im returning:')
-        console.log(JSON.parse(response.Policy))
         return JSON.parse(response.Policy)
       }
       return {}
@@ -121,28 +115,17 @@ async function putKmsKeyPolicy(keyArn: string | undefined, policy: string) {
 }
 
 function removeExistingReadOnlyStatement(statements: PolicyStatement[]) {
-  console.log('removeExistingReadOnlyStatement called. heres the statements before deletion:')
-  console.log(statements)
-  console.log('and heres after:')
-  console.log(statements.filter(statement => statement['Sid'] !== logArchiveReadOnlySid))
   return statements.filter(statement => statement['Sid'] !== logArchiveReadOnlySid);
 }
 
 async function addStatementToPolicy(policy: any, statement: PolicyStatement) {
-  console.log('inside addStatementToPolicy function')
   if(Object.keys(policy).length > 0) {
-    console.log('Object.keys(policy).length > 0 is TRUE. Heres the policy before removing existing statement:')
     const updatedStatements = removeExistingReadOnlyStatement(policy.Statement)
-    console.log(updatedStatements)
     updatedStatements.push(statement);
     policy.Statement = updatedStatements;
-    console.log('and here is the new updated policy to be returned to the createorupdate function:')
-    console.log(policy)
     return policy;
   }
   else {
-    console.log('Object.keys(policy).length > 0 is FALSE. Heres whats being returned to createorupdate function:')
-    console.log({Version: "2012-10-17", Statement: [statement]})
     return {
       Version: "2012-10-17",
       Statement: [statement]
@@ -188,27 +171,22 @@ async function createOrUpdateBucketPolicy(props: HandlerProperties) {
 
 async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
   const props = getPropertiesFromEvent(event);
-  console.log("OnCreate called!")
   await createOrUpdateBucketPolicy(props)
 }
 
 async function onUpdate(event: CloudFormationCustomResourceUpdateEvent) {
   const props = getPropertiesFromEvent(event);
-  console.log("OnUpdate called!")
   await createOrUpdateBucketPolicy(props)
 }
 
 async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
   const props = getPropertiesFromEvent(event);
-  console.log("OnDelete called!")
   let bucketPolicy = await getBucketPolicy(props.logBucketName);
   let keyPolicy = await getKmsKeyPolicy(props.logBucketKmsKeyArn);
 
   if(Object.keys(bucketPolicy).length > 0) {
     const updatedStatements = removeExistingReadOnlyStatement(bucketPolicy.Statement)
     bucketPolicy.Statement = updatedStatements;
-    console.log("inside Ondelete, heres the new bucket policy to be sent to S3:")
-    console.log(bucketPolicy)
     const response = await putBucketPolicy(
       props.logBucketName,
       JSON.stringify(bucketPolicy));
@@ -217,8 +195,6 @@ async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
   if(Object.keys(keyPolicy).length > 0) {
     const updatedStatements = removeExistingReadOnlyStatement(keyPolicy.Statement)
     keyPolicy.Statement = updatedStatements;
-    console.log("inside Ondelete, heres the new KMS policy to be sent to S3:")
-    console.log(keyPolicy)
     const response = await putKmsKeyPolicy(
       props.logBucketKmsKeyArn,
       JSON.stringify(keyPolicy));
