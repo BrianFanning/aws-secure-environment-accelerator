@@ -32,9 +32,9 @@ export async function logArchiveReadOnlyAccess(props:LogArchiveReadAccessProps) 
     }
   }
 
-  const LogBucketPolicy = new S3UpdateLogArchivePolicy(logArchiveStack, "UpdateLogArchivePolicy", {
-    roles: logArchiveReadOnlyRoles,
-    logBucket,
-    acceleratorPrefix
-  })
+  // const LogBucketPolicy = new S3UpdateLogArchivePolicy(logArchiveStack, "UpdateLogArchivePolicy", {
+  //   roles: logArchiveReadOnlyRoles,
+  //   logBucket,
+  //   acceleratorPrefix
+  // })
 }
