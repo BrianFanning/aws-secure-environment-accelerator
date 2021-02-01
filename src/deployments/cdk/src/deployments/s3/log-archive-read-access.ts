@@ -15,11 +15,9 @@ export interface LogArchiveReadAccessProps {
 
 export async function logArchiveReadOnlyAccess(props: LogArchiveReadAccessProps) {
   const { accountStacks, accounts, logBucket, config, acceleratorPrefix } = props;
-
   const logArchiveAccountKey = config['global-options']['central-log-services'].account;
   const logArchiveStack = accountStacks.getOrCreateAccountStack(logArchiveAccountKey);
-
-  let logArchiveReadOnlyRoles = [];
+  const logArchiveReadOnlyRoles = [];
 
   // Update Log Archive Bucket and KMS Key policies for roles with ssm-log-archive-read-only-access
   for (const { accountKey, iam: iamConfig } of config.getIamConfigs()) {
