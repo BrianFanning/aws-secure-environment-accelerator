@@ -19,16 +19,16 @@ export const handler = errorHandler(onEvent);
 
 const kms = new AWS.KMS();
 const s3 = new AWS.S3();
-const logArchiveReadOnlySid = "SSM Log Archive Read Only Roles"
+const logArchiveReadOnlySid = 'SSM Log Archive Read Only Roles';
 
 interface PolicyStatement {
-  Sid: string,
-  Effect: string,
-  Action: string[],
+  Sid: string;
+  Effect: string;
+  Action: string[];
   Principal: {
-    AWS: string[]
-  },
-  Resource: string[] | string
+    AWS: string[];
+  };
+  Resource: string[] | string;
 }
 
 async function onEvent(event: CloudFormationCustomResourceEvent) {
@@ -48,15 +48,16 @@ async function onEvent(event: CloudFormationCustomResourceEvent) {
 
 async function getBucketPolicy(logBucketName: string) {
   try {
-    const response = await s3.getBucketPolicy({
-      Bucket: logBucketName
-    }).promise()
-    if(response.Policy) {
-      return JSON.parse(response.Policy)
+    const response = await s3
+      .getBucketPolicy({
+        Bucket: logBucketName,
+      })
+      .promise();
+    if (response.Policy) {
+      return JSON.parse(response.Policy);
     }
-    return {}
-  }
-  catch (err) {
+    return {};
+  } catch (err) {
     console.error(err, err.stack);
     throw err;
   }
@@ -64,53 +65,55 @@ async function getBucketPolicy(logBucketName: string) {
 
 async function putBucketPolicy(logBucketName: string, policy: string) {
   try {
-    await s3.putBucketPolicy({
-      Bucket: logBucketName,
-      Policy: policy
-    }).promise()
-  }
-  catch (err) {
+    await s3
+      .putBucketPolicy({
+        Bucket: logBucketName,
+        Policy: policy,
+      })
+      .promise();
+  } catch (err) {
     console.error(err, err.stack);
     throw err;
   }
 }
 
 async function getKmsKeyPolicy(keyArn: string | undefined) {
-  if(keyArn) {
+  if (keyArn) {
     try {
-      const response = await kms.getKeyPolicy({
-        KeyId: keyArn,
-        PolicyName: 'default'
-      }).promise()
-      if(response.Policy) {
-        return JSON.parse(response.Policy)
+      const response = await kms
+        .getKeyPolicy({
+          KeyId: keyArn,
+          PolicyName: 'default',
+        })
+        .promise();
+      if (response.Policy) {
+        return JSON.parse(response.Policy);
       }
-      return {}
-    }
-    catch (err) {
+      return {};
+    } catch (err) {
       console.error(err, err.stack);
       throw err;
     }
   }
-  return {}
+  return {};
 }
 
 async function putKmsKeyPolicy(keyArn: string | undefined, policy: string) {
   if (keyArn) {
     try {
-      await kms.putKeyPolicy({
-        KeyId: keyArn,
-        Policy: policy,
-        PolicyName: 'default'
-      }).promise()
-    }
-    catch (err) {
+      await kms
+        .putKeyPolicy({
+          KeyId: keyArn,
+          Policy: policy,
+          PolicyName: 'default',
+        })
+        .promise();
+    } catch (err) {
       console.error(err, err.stack);
       throw err;
     }
-  }
-  else {
-    console.error("No KMS Key configured for this bucket")
+  } else {
+    console.error('No KMS Key configured for this bucket');
   }
 }
 
@@ -119,17 +122,16 @@ function removeExistingReadOnlyStatement(statements: PolicyStatement[]) {
 }
 
 async function addStatementToPolicy(policy: any, statement: PolicyStatement) {
-  if(Object.keys(policy).length > 0) {
-    const updatedStatements = removeExistingReadOnlyStatement(policy.Statement)
+  if (Object.keys(policy).length > 0) {
+    const updatedStatements = removeExistingReadOnlyStatement(policy.Statement);
     updatedStatements.push(statement);
     policy.Statement = updatedStatements;
     return policy;
-  }
-  else {
+  } else {
     return {
-      Version: "2012-10-17",
-      Statement: [statement]
-    }
+      Version: '2012-10-17',
+      Statement: [statement],
+    };
   }
 }
 
@@ -142,41 +144,37 @@ async function createOrUpdateBucketPolicy(props: HandlerProperties) {
     Effect: 'Allow',
     Action: ['s3:GetObject'],
     Principal: {
-      AWS: props.roles
+      AWS: props.roles,
     },
-    Resource: [`${props.logBucketArn}/*`]
-  }
+    Resource: [`${props.logBucketArn}/*`],
+  };
 
   const keyPolicyStatement = {
     Sid: logArchiveReadOnlySid,
     Effect: 'Allow',
-    Action: [
-      'kms:Decrypt',
-      'kms:DescribeKey',
-      'kms:GenerateDataKey'
-    ],
+    Action: ['kms:Decrypt', 'kms:DescribeKey', 'kms:GenerateDataKey'],
     Principal: {
-      AWS: props.roles
+      AWS: props.roles,
     },
-    Resource: '*'
-  }
+    Resource: '*',
+  };
 
   bucketPolicy = await addStatementToPolicy(bucketPolicy, bucketPolicyStatement);
   keyPolicy = await addStatementToPolicy(keyPolicy, keyPolicyStatement);
 
   await putBucketPolicy(props.logBucketName, JSON.stringify(bucketPolicy));
   await putKmsKeyPolicy(props.logBucketKmsKeyArn, JSON.stringify(keyPolicy));
-  return {}
+  return {};
 }
 
 async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
   const props = getPropertiesFromEvent(event);
-  await createOrUpdateBucketPolicy(props)
+  await createOrUpdateBucketPolicy(props);
 }
 
 async function onUpdate(event: CloudFormationCustomResourceUpdateEvent) {
   const props = getPropertiesFromEvent(event);
-  await createOrUpdateBucketPolicy(props)
+  await createOrUpdateBucketPolicy(props);
 }
 
 async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
@@ -184,22 +182,18 @@ async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
   let bucketPolicy = await getBucketPolicy(props.logBucketName);
   let keyPolicy = await getKmsKeyPolicy(props.logBucketKmsKeyArn);
 
-  if(Object.keys(bucketPolicy).length > 0) {
-    const updatedStatements = removeExistingReadOnlyStatement(bucketPolicy.Statement)
+  if (Object.keys(bucketPolicy).length > 0) {
+    const updatedStatements = removeExistingReadOnlyStatement(bucketPolicy.Statement);
     bucketPolicy.Statement = updatedStatements;
-    const response = await putBucketPolicy(
-      props.logBucketName,
-      JSON.stringify(bucketPolicy));
+    const response = await putBucketPolicy(props.logBucketName, JSON.stringify(bucketPolicy));
   }
 
-  if(Object.keys(keyPolicy).length > 0) {
-    const updatedStatements = removeExistingReadOnlyStatement(keyPolicy.Statement)
+  if (Object.keys(keyPolicy).length > 0) {
+    const updatedStatements = removeExistingReadOnlyStatement(keyPolicy.Statement);
     keyPolicy.Statement = updatedStatements;
-    const response = await putKmsKeyPolicy(
-      props.logBucketKmsKeyArn,
-      JSON.stringify(keyPolicy));
+    const response = await putKmsKeyPolicy(props.logBucketKmsKeyArn, JSON.stringify(keyPolicy));
   }
-  return {}
+  return {};
 }
 
 function getPropertiesFromEvent(event: CloudFormationCustomResourceEvent) {

@@ -121,10 +121,14 @@ export class IamAssets extends cdk.Construct {
 
     const createIamSSMLogArchiveWritePolicy = (): iam.ManagedPolicy => {
       const policyName = createPolicyName('SSMWriteAccessPolicy');
-      const iamSSMLogArchiveWriteAccessPolicy = new iam.ManagedPolicy(this, `IAM-SSM-LogArchive-Write-Policy-${accountKey}`, {
-        managedPolicyName: policyName,
-        description: policyName,
-      });
+      const iamSSMLogArchiveWriteAccessPolicy = new iam.ManagedPolicy(
+        this,
+        `IAM-SSM-LogArchive-Write-Policy-${accountKey}`,
+        {
+          managedPolicyName: policyName,
+          description: policyName,
+        },
+      );
 
       iamSSMLogArchiveWriteAccessPolicy.addStatements(
         new iam.PolicyStatement({
@@ -161,10 +165,14 @@ export class IamAssets extends cdk.Construct {
 
     const createIamSSMLogArchiveReadOnlyPolicy = (): iam.ManagedPolicy => {
       const policyName = createPolicyName('SSMReadOnlyAccessPolicy');
-      const iamSSMLogArchiveReadOnlyAccessPolicy = new iam.ManagedPolicy(this, `IAM-SSM-LogArchive-ReadOnly-Policy-${accountKey}`, {
-        managedPolicyName: policyName,
-        description: policyName,
-      });
+      const iamSSMLogArchiveReadOnlyAccessPolicy = new iam.ManagedPolicy(
+        this,
+        `IAM-SSM-LogArchive-ReadOnly-Policy-${accountKey}`,
+        {
+          managedPolicyName: policyName,
+          description: policyName,
+        },
+      );
 
       iamSSMLogArchiveReadOnlyAccessPolicy.addStatements(
         new iam.PolicyStatement({
@@ -220,12 +228,14 @@ export class IamAssets extends cdk.Construct {
       }
 
       const ssmLogArchiveWritePolicy =
-        iamRoles.filter(i =>
-          i['ssm-log-archive-write-access'] || i['ssm-log-archive-access']
-        ).length > 0 ? createIamSSMLogArchiveWritePolicy() : undefined;
+        iamRoles.filter(i => i['ssm-log-archive-write-access'] || i['ssm-log-archive-access']).length > 0
+          ? createIamSSMLogArchiveWritePolicy()
+          : undefined;
 
       const ssmLogArchiveReadOnlyPolicy =
-        iamRoles.filter(i => i['ssm-log-archive-read-only-access']).length > 0 ? createIamSSMLogArchiveReadOnlyPolicy() : undefined;
+        iamRoles.filter(i => i['ssm-log-archive-read-only-access']).length > 0
+          ? createIamSSMLogArchiveReadOnlyPolicy()
+          : undefined;
 
       for (const iamRole of iamRoles) {
         if (!IamRoleConfigType.is(iamRole)) {
@@ -257,8 +267,10 @@ export class IamAssets extends cdk.Construct {
             roleKey: 'IamAccountRole',
           });
 
-          if ((iamRole['ssm-log-archive-write-access'] || iamRole['ssm-log-archive-access']) 
-              && ssmLogArchiveWritePolicy) {
+          if (
+            (iamRole['ssm-log-archive-write-access'] || iamRole['ssm-log-archive-access']) &&
+            ssmLogArchiveWritePolicy
+          ) {
             role.addManagedPolicy(ssmLogArchiveWritePolicy);
           }
 

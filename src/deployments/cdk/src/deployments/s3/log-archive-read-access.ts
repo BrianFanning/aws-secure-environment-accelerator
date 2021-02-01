@@ -7,13 +7,13 @@ import { S3UpdateLogArchivePolicy } from '@aws-accelerator/custom-resource-s3-up
 
 export interface LogArchiveReadAccessProps {
   accountStacks: AccountStacks;
-  accounts: Account[]
+  accounts: Account[];
   logBucket: s3.IBucket;
   config: AcceleratorConfig;
   acceleratorPrefix: string;
 }
 
-export async function logArchiveReadOnlyAccess(props:LogArchiveReadAccessProps) {
+export async function logArchiveReadOnlyAccess(props: LogArchiveReadAccessProps) {
   const { accountStacks, accounts, logBucket, config, acceleratorPrefix } = props;
 
   const logArchiveAccountKey = config['global-options']['central-log-services'].account;
@@ -22,19 +22,19 @@ export async function logArchiveReadOnlyAccess(props:LogArchiveReadAccessProps) 
   let logArchiveReadOnlyRoles = [];
 
   // Update Log Archive Bucket and KMS Key policies for roles with ssm-log-archive-read-only-access
-  for (const {accountKey, iam: iamConfig} of config.getIamConfigs()) {
+  for (const { accountKey, iam: iamConfig } of config.getIamConfigs()) {
     const accountId = getAccountId(accounts, accountKey);
     const roles = iamConfig.roles || [];
     for (const role of roles) {
       if (role['ssm-log-archive-read-only-access']) {
-        logArchiveReadOnlyRoles.push(`arn:aws:iam::${accountId}:role/${role.role}`)
+        logArchiveReadOnlyRoles.push(`arn:aws:iam::${accountId}:role/${role.role}`);
       }
     }
   }
 
-  const LogBucketPolicy = new S3UpdateLogArchivePolicy(logArchiveStack, "UpdateLogArchivePolicy", {
+  const LogBucketPolicy = new S3UpdateLogArchivePolicy(logArchiveStack, 'UpdateLogArchivePolicy', {
     roles: logArchiveReadOnlyRoles,
     logBucket,
-    acceleratorPrefix
-  })
+    acceleratorPrefix,
+  });
 }
