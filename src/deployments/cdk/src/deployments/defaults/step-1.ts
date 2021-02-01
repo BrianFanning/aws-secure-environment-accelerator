@@ -14,7 +14,7 @@ import {
 } from '@aws-accelerator/cdk-accelerator/src/core/accelerator-name-generator';
 import { CfnLogBucketOutput, CfnAesBucketOutput, CfnCentralBucketOutput, CfnEbsKmsOutput } from './outputs';
 import { AccountStacks } from '../../common/account-stacks';
-import { Account, getAccountId } from '../../utils/accounts';
+import { Account } from '../../utils/accounts';
 import { createDefaultS3Bucket, createDefaultS3Key } from './shared';
 import { overrideLogicalId } from '../../utils/cdk';
 import { getVpcSharedAccountKeys } from '../../common/vpc-subnet-sharing';
@@ -158,7 +158,7 @@ function createCentralBucketCopy(props: DefaultsStep1Props) {
  * Creates a bucket that contains copies of the files in the central bucket.
  */
 function createCentralLogBucket(props: DefaultsStep1Props) {
-  const { accountStacks, accounts, config} = props;
+  const { accountStacks, accounts, config } = props;
 
   const logAccountConfig = config['global-options']['central-log-services'];
   const logAccountStack = accountStacks.getOrCreateAccountStack(logAccountConfig.account);

@@ -1,1 +1,1 @@
-export * from './enable-log-archive-read-access';
+export * from './log-archive-read-access';
