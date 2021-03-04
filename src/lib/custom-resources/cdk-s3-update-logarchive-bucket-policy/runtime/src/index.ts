@@ -192,6 +192,7 @@ async function onCreate(event: CloudFormationCustomResourceCreateEvent) {
 async function onUpdate(event: CloudFormationCustomResourceUpdateEvent) {
   const props = getPropertiesFromEvent(event);
   await createOrUpdateBucketPolicy(props);
+  return {PhysicalResourceId: event.PhysicalResourceId};
 }
 
 async function onDelete(event: CloudFormationCustomResourceDeleteEvent) {
